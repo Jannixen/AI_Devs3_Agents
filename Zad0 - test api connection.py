@@ -3,7 +3,6 @@
 # Version: 1.0
 # Description: This script tests ability to connect with API provided by course creator
 
-
 import requests
 
 # URL to fetch data from

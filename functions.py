@@ -5,11 +5,14 @@
 
 
 import base64
-import requests
-import openai
-from dotenv import load_dotenv
 import os
 from typing import Any, Dict, Optional
+
+import openai
+import requests
+from dotenv import load_dotenv
+from langfuse.decorators import observe
+from langfuse.openai import openai as lfopenai
 
 # Load the .env file
 load_dotenv()
@@ -18,7 +21,7 @@ api_key = os.getenv('OPENAI_API_KEY')
 
 def post_json(data_url: str, json_content: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     try:
-        response = requests.post(data_url, json=json_content, verify=False)
+        response = requests.post(data_url, json=json_content)
         response.raise_for_status()  # Check for HTTP errors
         return response.json()  # Directly return the JSON response
     except requests.exceptions.RequestException as e:
@@ -31,6 +34,22 @@ def ask_llm(question: str, model_name: str = "gpt-4o-mini", system_message: str 
     openai.api_key = api_key
     client = openai.Client(api_key=openai.api_key)
     response = client.chat.completions.create(
+        model=model_name,
+        messages=[
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": question}
+        ],
+        max_tokens=tokens_n,
+        temperature=temp
+    )
+    return response.choices[0].message.content.strip()
+
+
+@observe()
+def ask_llm_langfuse(question: str, model_name: str = "gpt-4o-mini",
+                     system_message: str = "Give me short and specific answer",
+                     tokens_n: int = 500, temp: float = 0.0):
+    response = lfopenai.chat.completions.create(
         model=model_name,
         messages=[
             {"role": "system", "content": system_message},
